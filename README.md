@@ -15,7 +15,8 @@ python -m venv .venv
 .venv/Scripts/python -m raqam.cli serve                # http://127.0.0.1:8000  → install as an app
 ```
 
-`python selfcheck.py` runs every module's built-in check. Docker: see [docs/deploy.md](docs/deploy.md).
+`python selfcheck.py` runs every module's built-in check. 
+Docker: see [docs/deploy.md](docs/deploy.md).
 
 ## Phase map (all built)
 
@@ -46,7 +47,7 @@ load the app works with the network off:
 - **Program** — the brief in the app: the problem, six sectors ranked by pilot-readiness,
   the elections position, roadmap, funding (Ignite), sustainability, risks.
 
-## Datasets
+## Datasets:
 
 - **MNIST** — standard Keras mirror.
 - **HODA** — public Perso-Arabic handwritten digits (farsiocr.ir), via the
