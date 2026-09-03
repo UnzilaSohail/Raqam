@@ -1,7 +1,7 @@
 /* Raqam service worker — offline-first app shell.
  * Shell (HTML/CSS/JS/model/icons) is cache-first so the app opens with no signal.
  * /api/* is network-first; scanning + queue + review all work offline in the page. */
-const CACHE = 'raqam-v12';
+const CACHE = 'raqam-v15';
 const SHELL = [
   '/', '/static/app.css', '/static/app.js', '/static/recognize.js',
   '/static/numerals_cnn.json', '/static/icon-192.png', '/static/icon-512.png',
