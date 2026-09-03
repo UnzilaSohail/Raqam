@@ -13,10 +13,18 @@
 
 <header class="masthead">
   <div class="masthead__in">
-    <div class="crest">رقم</div>
+    <div class="crest" aria-hidden="true">
+      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="46" height="46" rx="4" fill="#01411C" stroke="#b99733" stroke-width="2"/>
+        <rect x="8"  y="16" width="9" height="16" fill="none" stroke="#fff" stroke-width="2"/>
+        <rect x="19.5" y="16" width="9" height="16" fill="none" stroke="#fff" stroke-width="2"/>
+        <rect x="31" y="16" width="9" height="16" fill="none" stroke="#fff" stroke-width="2"/>
+        <path d="M32.5 24.5 l2.7 3 5-6" fill="none" stroke="#b99733" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <div>
       <h1>RAQAM — Handwritten Form Digitizer</h1>
-      <div class="sub"><span class="ur">دستی فارم ڈیجیٹائزیشن ٹول</span> · offline · confidence-triaged</div>
+      <div class="sub"><span class="ur">دستی فارم ڈیجیٹائزیشن</span> · offline-first · confidence-triaged · open source</div>
     </div>
     <div class="masthead__spacer"></div>
     <div class="conn" id="conn"><span class="dot"></span><span id="connText">Online</span></div>
@@ -30,25 +38,28 @@
 </div>
 
 <nav class="tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="scan">Scan / <span class="ur">اسکین</span></button>
-  <button role="tab" aria-selected="false" data-tab="review">Review Queue / <span class="ur">جائزہ</span></button>
-  <button role="tab" aria-selected="false" data-tab="records">Records / <span class="ur">ریکارڈ</span></button>
-  <button role="tab" aria-selected="false" data-tab="dashboard">Dashboard / <span class="ur">ڈیش بورڈ</span></button>
-  <button role="tab" aria-selected="false" data-tab="engine">Engine / <span class="ur">انجن</span></button>
-  <button role="tab" aria-selected="false" data-tab="about">About / <span class="ur">تعارف</span></button>
+  <div class="tabs__in">
+    <button role="tab" aria-selected="true"  data-tab="scan">Scan<span class="ur">اسکین</span></button>
+    <button role="tab" aria-selected="false" data-tab="review">Review<span class="ur">جائزہ</span></button>
+    <button role="tab" aria-selected="false" data-tab="records">Records<span class="ur">ریکارڈ</span></button>
+    <button role="tab" aria-selected="false" data-tab="dashboard">Dashboard<span class="ur">ڈیش بورڈ</span></button>
+    <button role="tab" aria-selected="false" data-tab="program">Program<span class="ur">پروگرام</span></button>
+    <button role="tab" aria-selected="false" data-tab="engine">Engine<span class="ur">انجن</span></button>
+    <button role="tab" aria-selected="false" data-tab="about">About<span class="ur">تعارف</span></button>
+  </div>
 </nav>
 
 <main>
 
-  <!-- SCAN -->
+  <!-- ============ SCAN ============ -->
   <section class="panel active" id="panel-scan">
     <div class="card">
       <h2>Digitize a form field <span class="ur">فارم کا خانہ ڈیجیٹائز کریں</span></h2>
-      <p class="help">Photograph one printed row/grid of digit boxes — a roll number, a tally count,
-        a meter reading. Works fully offline; results are saved to the local queue on this device.</p>
+      <p class="help">Photograph one printed row or grid of digit boxes — a roll number, a vaccination
+        tally, a meter reading. Runs fully offline; results are saved to the local queue on this device.</p>
       <div class="row">
         <div>
-          <label for="formName">Form / register &nbsp; <span class="ur">فارم</span></label>
+          <label for="formName">Form / register <span class="ur">فارم</span></label>
           <input type="text" id="formName" value="marksheet" list="formList">
           <datalist id="formList">
             <option>marksheet</option><option>polio-tally</option><option>epi-tally</option>
@@ -56,17 +67,19 @@
           </datalist>
         </div>
         <div>
-          <label for="fieldName">Field &nbsp; <span class="ur">خانہ</span></label>
+          <label for="fieldName">Field <span class="ur">خانہ</span></label>
           <input type="text" id="fieldName" value="roll_no">
         </div>
         <div>
-          <label for="numeral">Show digits as &nbsp; <span class="ur">ہندسے</span></label>
-          <select id="numeral"><option value="western">0 1 2 3 (Western)</option>
-            <option value="urdu">۰ ۱ ۲ ۳ (Urdu)</option></select>
+          <label for="numeral">Show digits as <span class="ur">ہندسے</span></label>
+          <select id="numeral">
+            <option value="western">0 1 2 3 — Western</option>
+            <option value="urdu">۰ ۱ ۲ ۳ — Urdu</option>
+          </select>
         </div>
       </div>
       <div style="margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap; align-items:center">
-        <label class="btn" style="cursor:pointer; display:inline-block">
+        <label class="btn" style="cursor:pointer">
           Take / choose photo
           <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
         </label>
@@ -77,55 +90,291 @@
     </div>
   </section>
 
-  <!-- REVIEW -->
+  <!-- ============ REVIEW ============ -->
   <section class="panel" id="panel-review">
     <div class="card">
       <h2>Review queue <span class="ur">جائزہ فہرست</span></h2>
-      <p class="help">Records with at least one flagged digit. Correct the value and save —
-        the digit the model was unsure of is marked in red.</p>
-      <div id="reviewOut"></div>
+      <p class="help">Records with at least one flagged digit. The digit the model was unsure of is
+        marked in red — correct the value and save.</p>
+      <div class="scroll-x" id="reviewOut"></div>
     </div>
   </section>
 
-  <!-- RECORDS -->
+  <!-- ============ RECORDS ============ -->
   <section class="panel" id="panel-records">
     <div class="card">
       <h2>All records <span class="ur">تمام ریکارڈ</span></h2>
-      <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.8rem">
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.8rem; align-items:center">
         <button class="btn secondary" id="expCsv">Export CSV</button>
-        <button class="btn secondary" id="expXlsx">Export Excel</button>
+        <button class="btn secondary" id="expXlsx">Export Excel (synced)</button>
         <button class="btn" id="syncBtn">Sync to server</button>
         <span id="syncMsg" class="help" style="margin:0"></span>
       </div>
-      <div id="recordsOut"></div>
+      <div class="scroll-x" id="recordsOut"></div>
     </div>
   </section>
 
-  <!-- DASHBOARD -->
+  <!-- ============ DASHBOARD ============ -->
   <section class="panel" id="panel-dashboard">
     <div class="card">
       <h2>District dashboard <span class="ur">ضلعی ڈیش بورڈ</span></h2>
-      <p class="help">Aggregate view of everything digitized on this device (and anything synced in).</p>
+      <p class="help">Aggregate view of everything digitized on this device, plus anything synced in.</p>
       <div class="kpis" id="kpis"></div>
     </div>
     <div class="card">
       <h2>By form type <span class="ur">فارم کی قسم کے لحاظ سے</span></h2>
-      <div id="byForm"></div>
+      <div class="scroll-x" id="byForm"></div>
     </div>
     <div class="card">
       <h2>Pilot evaluation <span class="ur">پائلٹ جانچ</span></h2>
-      <p class="help">Phase-9 metrics: measured against a manual-entry baseline. Run
-        <code>python -m raqam.evaluate</code> on labelled scans to populate this.</p>
-      <div id="evalOut" class="help">No evaluation run recorded yet.</div>
+      <p class="help">Phase-9 metrics, measured against a manual-entry baseline. Run
+        <code>python -m raqam.evaluate --scans DIR</code> on labelled scans to populate this.</p>
+      <div class="scroll-x" id="evalOut"><p class="help">No evaluation run recorded yet.</p></div>
     </div>
   </section>
 
-  <!-- ENGINE -->
+  <!-- ============ PROGRAM ============ -->
+  <section class="panel" id="panel-program">
+    <nav class="subnav">
+      <a href="#problem">The problem</a>
+      <a href="#sectors">Six sectors</a>
+      <a href="#elections">Elections</a>
+      <a href="#built">Prototype → real</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#funding">Funding</a>
+      <a href="#sustain">Sustainability</a>
+      <a href="#risks">Risks</a>
+    </nav>
+
+    <div class="card anchor" id="problem">
+      <h2>The problem <span class="ur">مسئلہ</span></h2>
+      <div class="prose">
+        <p class="lede">A large share of Pakistan's routine record-keeping still runs on hand-filled
+          paper, in places where connectivity is patchy and cloud OCR is priced in dollars.</p>
+        <p>The data on those forms decides who got vaccinated, who passed an exam, who received flood
+          relief, whose electricity bill is correct. The person filling the form often writes digits
+          in Urdu-Indic numerals (<span class="ur">۰۱۲۳۴۵۶۷۸۹</span>) as readily as Western ones.</p>
+        <h4>Why not just call a cloud OCR API</h4>
+        <ul>
+          <li><strong>Cost compounds at scale</strong> — a per-request bill in dollars gets worse
+            every time the rupee slips against it.</li>
+          <li><strong>Connectivity is the real bottleneck</strong> — flood camps, northern districts
+            and many rural union councils don't have the link a cloud API assumes.</li>
+          <li><strong>Western-digit models silently fail</strong> on Urdu numerals.</li>
+          <li><strong>The data is sensitive by default</strong> — CNIC numbers, health records,
+            beneficiary lists. Pakistan's Personal Data Protection Act is still in draft, so
+            privacy-by-default is the safer choice now, not later.</li>
+          <li><strong>100% automation is the wrong goal</strong> — a silent wrong digit on a
+            marksheet or a vaccination record is worse than a flagged one. The product is the
+            <em>triage</em>, not just the recognition.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card anchor" id="sectors">
+      <h2>Six sectors, ranked by pilot-readiness <span class="ur">شعبے</span></h2>
+      <p class="help">The bar shows how ready each pillar is for a pilot with the tooling as it
+        stands today. Order is deliberate.</p>
+      <div class="sectors">
+
+        <div class="sector">
+          <div class="rank">1</div>
+          <h4><span class="ur">صحت</span> Health — polio &amp; EPI tally sheets</h4>
+          <div class="what">Lady Health Workers and vaccination teams record house-to-house
+            immunization tallies on paper during campaigns, later compiled by hand.</div>
+          <div class="fit">Digit-only, high volume, forgiving of a human-review step.
+            <span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+        </div>
+
+        <div class="sector">
+          <div class="rank">2</div>
+          <h4><span class="ur">تعلیم</span> Education — BISE &amp; school marksheets</h4>
+          <div class="what">Regional boards (BISE Lahore, Karachi, Peshawar and others) and schools
+            compile roll numbers and marks from handwritten sheets; re-checks are a recurring
+            complaint at result time.</div>
+          <div class="fit">Printed roll-number boxes match the scanner pipeline exactly; lowest
+            political sensitivity — the recommended first pilot.
+            <span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+        </div>
+
+        <div class="sector">
+          <div class="rank">3</div>
+          <h4><span class="ur">آفات</span> Disaster relief — flood-camp registration</h4>
+          <div class="what">After the 2022 floods, agencies registered displaced households on paper
+            in camps with no signal; incomplete registries were cited as a real gap in the response.</div>
+          <div class="fit">Strong need, but wants a rugged offline-first app and field training, not
+            just a script.
+            <span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+        </div>
+
+        <div class="sector">
+          <div class="rank">4</div>
+          <h4><span class="ur">مقامی حکومت</span> Local government — union council registers</h4>
+          <div class="what">Birth, death and Nikah registration runs through hand-filled registers
+            before reaching NADRA's systems.</div>
+          <div class="fit">Moderate — needs alphanumeric (names), not just digits, for full value.
+            <span class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span></div>
+        </div>
+
+        <div class="sector revenue">
+          <div class="rank">5</div>
+          <h4><span class="ur">یوٹیلیٹیز</span> Utilities — DISCO meter readings</h4>
+          <div class="what">Manually noted readings are a recurring source of inflated or disputed
+            electricity bills — dedicated complaint portals exist just to contest them.</div>
+          <div class="fit">Technically strong, and the one pillar with a plausible paying customer —
+            the likely revenue path.
+            <span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+        </div>
+
+        <div class="sector risk">
+          <div class="rank">6</div>
+          <h4><span class="ur">شفافیت</span> Civic transparency — Form 45 result sheets</h4>
+          <div class="what">Polling-station result forms are the primary record election-transparency
+            groups cross-check against consolidated results (Form 47).</div>
+          <div class="fit">Highest value and highest risk. Build here <strong>last</strong>, and never
+            as an "official" tool — see below.
+            <span class="meter"><i class="on"></i><i></i><i></i><i></i><i></i></span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card anchor" id="elections">
+      <h2>The elections question <span class="ur">انتخابات کا سوال</span></h2>
+      <div class="prose">
+        <p>Form 45 is the most tempting pillar and the one to touch last. Discrepancies between
+          Form 45 and Form 47 have been a genuine, actively disputed issue in recent elections,
+          including court directives to publish Form 45 images. That makes it a real digitization
+          target — and the pillar where a well-intentioned tool can do the most damage if it is
+          wrong, or is perceived as taking a side.</p>
+      </div>
+      <div class="callout caution">
+        <span class="t">Position</span>
+        Do not build for elections first, and do not present Raqam as an official or binding tool at
+        any point. If pursued at all, scope it narrowly as an independent civil-society aid for
+        cross-checking <em>already-published</em> Form 45 images against reported totals — never as a
+        system that produces or certifies results — and only after a specific legal and political
+        review, ideally alongside an established election-monitoring body.
+      </div>
+      <p class="help">Prove the pipeline in education or health first, where a wrong digit costs a
+        re-check rather than a headline.</p>
+    </div>
+
+    <div class="card anchor" id="built">
+      <h2>What the prototype was missing — now built <span class="ur">جو کمی تھی</span></h2>
+      <p class="help">The weekend build was a good learning project. These are the gaps that had to
+        close before it could go in front of a clerk or a health worker.</p>
+      <ul class="checklist">
+        <li class="done"><strong>Urdu-numeral recognition</strong> — rural form-fillers write
+          <span class="ur">۰۱۲۳۴۵۶۷۸۹</span>, not just 0–9. One script-agnostic model now recognizes
+          both, trained on MNIST + Perso-Arabic handwriting.</li>
+        <li class="done"><strong>Accuracy upgrade path</strong> — the 92–96% MLP is not good enough
+          for a marksheet or a vaccination record. A from-scratch CNN plus a hard confidence-triage
+          rule now flags every uncertain digit instead of guessing.</li>
+        <li class="done"><strong>Privacy-by-default design</strong> — recognition, storage and review
+          all run on-device; only a hash of the source image is kept, never the image. Sync is
+          opt-in per deployment.</li>
+        <li class="done"><strong>Offline field app</strong> — an installable PWA that runs on a
+          sub-$100 Android and on a laptop, with a local queue and opportunistic sync.</li>
+        <li class="done"><strong>Pilot evaluation harness</strong> — measures digit error rate before
+          and after review, auto-accept rate, and time saved vs. manual entry.</li>
+        <li class="todo"><strong>Funding path</strong> — an application to Ignite – National
+          Technology Fund, scoped to a single-sector pilot (see Funding).</li>
+        <li class="todo"><strong>Real form templates &amp; a named pilot partner</strong> — still
+          needed from you.</li>
+      </ul>
+    </div>
+
+    <div class="card anchor" id="roadmap">
+      <h2>Roadmap <span class="ur">روڈ میپ</span></h2>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Phase</th><th>Goal</th><th>State</th></tr></thead>
+          <tbody>
+            <tr><td>1–4</td><td>Core engine: NumPy network, live training, "dreams", draw-and-predict</td><td><span class="pill ok">built</span></td></tr>
+            <tr><td>5</td><td>Confidence-triage digitizer; CSV/Excel export</td><td><span class="pill ok">built</span></td></tr>
+            <tr><td>6</td><td>Full scanner pipeline: box detection, camera capture, review image</td><td><span class="pill ok">built</span></td></tr>
+            <tr><td>7</td><td>Urdu-Indic numerals; MLP → compact CNN</td><td><span class="pill ok">built</span></td></tr>
+            <tr><td>8</td><td>Offline-first app: on-device inference, local queue, sync, review UI</td><td><span class="pill ok">built</span></td></tr>
+            <tr><td>9</td><td>Paid pilot with one partner in one sector; 500+ real forms; measured error rate</td><td><span class="pill warn">needs partner</span></td></tr>
+            <tr><td>10</td><td>Second sector; formalize the sustainability model; grant / DISCO revenue</td><td><span class="pill warn">later</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4 class="anchor" style="color:var(--green-600); margin:1.2rem 0 .4rem">Next 90 days</h4>
+      <ol class="prose" style="font-size:.9rem">
+        <li>Finish the engine and demo — done; it is the credibility artifact for every conversation.</li>
+        <li>Pick one sector to pilot first (education is lowest-risk) and identify one specific
+          willing partner — a single school board or district office, not a national rollout.</li>
+        <li>Continue the CNN + Urdu-numeral work with real scanned samples.</li>
+        <li>Finalize the one-page data-handling policy before any conversation involves real people's data.</li>
+        <li>Prepare an Ignite seed-funding application scoped to that single-sector pilot.</li>
+      </ol>
+    </div>
+
+    <div class="card anchor" id="funding">
+      <h2>Partners &amp; funding <span class="ur">شراکت دار اور فنڈنگ</span></h2>
+      <div class="grid2">
+        <div class="mini"><h4>Seed funding</h4>Ignite – National Technology Fund (Ministry of IT &amp;
+          Telecom), via the Pakistan Startup Fund or its incubation centers — the dedicated public
+          tech-fund vehicle, scoped to a single-sector pilot.</div>
+        <div class="mini"><h4>Technical partners</h4>University CS/EE departments (FAST-NUCES, NUST,
+          ITU, LUMS) — final-year-project pipeline for the CNN and Urdu-numeral work.</div>
+        <div class="mini"><h4>Health pilot</h4>Provincial Emergency Operations Centres / EPI
+          programme, with UNICEF Pakistan's innovation work as a possible technical ally.</div>
+        <div class="mini"><h4>Education pilot</h4>One regional education board (BISE) or a district
+          education office — bounded form templates, low political sensitivity.</div>
+        <div class="mini"><h4>Commercial</h4>A single DISCO's billing department, for meter-reading
+          digitization — a direct, quantifiable cost saving a utility would pay for.</div>
+        <div class="mini"><h4>Elections track</h4>Established local election-monitoring networks —
+          approached only after the caution above is satisfied.</div>
+      </div>
+    </div>
+
+    <div class="card anchor" id="sustain">
+      <h2>Sustainability <span class="ur">پائیداری</span></h2>
+      <div class="prose">
+        <p>An open-core model, so the project isn't permanently dependent on the next grant cycle:</p>
+        <ul>
+          <li><strong>Free tier</strong> — the offline engine + mobile app, self-hosted, for schools,
+            NGOs and government pilots. This is the trust and adoption layer.</li>
+          <li><strong>Grant-funded</strong> — health and disaster-relief pilots, through Ignite and
+            donor/NGO partners.</li>
+          <li><strong>Commercial</strong> — a DISCO meter-reading contract cross-subsidizes the
+            free-tier work.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card anchor" id="risks">
+      <h2>Risks <span class="ur">خطرات</span></h2>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Risk</th><th>Severity</th><th>Guardrail</th></tr></thead>
+          <tbody>
+            <tr><td>A confidently wrong digit reaches final data unflagged</td><td><span class="pill flag">High</span></td>
+              <td>Conservative threshold; dual-entry spot-checks during pilot; auto-accept never at 100%.</td></tr>
+            <tr><td>Tool perceived as an official/authoritative source in a dispute (esp. elections)</td><td><span class="pill flag">High</span></td>
+              <td>Explicit non-goals in every deployment agreement; elections pillar deferred and legally reviewed first.</td></tr>
+            <tr><td>Sensitive data (CNIC, health) mishandled or leaked</td><td><span class="pill flag">High</span></td>
+              <td>On-device by default, encrypted storage, no raw-image retention beyond a hash, partner-aligned consent.</td></tr>
+            <tr><td>Low trust from field staff (fear of being replaced or blamed)</td><td><span class="pill warn">Medium</span></td>
+              <td>Positioned as a review-assist tool; field staff involved in pilot design, not just rollout.</td></tr>
+            <tr><td>Funding runs out before the commercial track matures</td><td><span class="pill warn">Medium</span></td>
+              <td>Keep education/health pilots small and grant-scoped; don't over-hire ahead of revenue.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ENGINE ============ -->
   <section class="panel" id="panel-engine">
     <div class="card">
       <h2>Recognizer training <span class="ur">ماڈل کی تربیت</span></h2>
-      <p class="help">The learning engine — a from-scratch neural network. Watch the loss fall and
-        validation accuracy rise as it trains on handwritten digits.</p>
+      <p class="help">The learning engine — a from-scratch neural network. Watch training loss fall
+        and validation accuracy rise. (The production CNN is trained from the command line; this is
+        the "watch it think" demo.)</p>
       <button class="btn" id="trainBtn">Train (3 epochs)</button>
       <span id="trainStat" class="help" style="margin:0"></span>
       <canvas id="chart" width="1000" height="130"></canvas>
@@ -134,7 +383,7 @@
     <div class="card">
       <h2>What the network learned <span class="ur">ماڈل نے کیا سیکھا</span></h2>
       <p class="help">Each image is generated by pushing the network to imagine a digit — a check that
-        it has learned digit shapes, not noise.</p>
+        it learned digit shapes, not noise.</p>
       <button class="btn secondary" id="dreamBtn">Generate</button>
       <div class="tiles" id="dreams" style="margin-top:.8rem"></div>
     </div>
@@ -150,25 +399,39 @@
     </div>
   </section>
 
-  <!-- ABOUT -->
+  <!-- ============ ABOUT ============ -->
   <section class="panel" id="panel-about">
     <div class="card">
       <h2>About Raqam <span class="ur">رقم کے بارے میں</span></h2>
-      <p>Raqam (<span class="ur">رقم</span> — "figure, number") turns a photo of a handwritten form
-        field into structured data, on ordinary phones and low-cost computers, with no internet
-        connection and no cloud service. It recognizes both Western digits (0–9) and
-        Urdu-Indic numerals (<span class="ur">۰–۹</span>) natively.</p>
-      <p><strong>It is not an official or authoritative record system.</strong> It is a review-assist
-        tool. A person confirms every value the model is not confident about before it becomes data.</p>
-      <p class="ur">رقم ایک معاون آلہ ہے۔ یہ کوئی سرکاری ریکارڈ سسٹم نہیں۔ ماڈل جس ہندسے کے بارے میں
-        غیر یقینی ہو، اسے حتمی شکل دینے سے پہلے ایک فرد اس کی تصدیق کرتا ہے۔</p>
-      <h2 style="margin-top:1.2rem">Privacy <span class="ur">رازداری</span></h2>
-      <ul class="help">
+      <div class="prose">
+        <p class="lede">Raqam (<span class="ur">رقم</span> — "figure, number") turns a photo of a
+          handwritten form field into structured data, on ordinary phones and low-cost computers,
+          with no internet connection and no cloud service.</p>
+        <p>It recognizes both Western digits (0–9) and Urdu-Indic numerals
+          (<span class="ur">۰–۹</span>) natively. <strong>It is not an official or authoritative
+          record system</strong> — it is a review-assist tool. A person confirms every value the
+          model is not confident about before it becomes data.</p>
+        <p class="ur">رقم ایک معاون آلہ ہے، کوئی سرکاری ریکارڈ سسٹم نہیں۔ ماڈل جس ہندسے کے بارے میں
+          غیر یقینی ہو، اسے حتمی شکل دینے سے پہلے ایک فرد اس کی تصدیق کرتا ہے۔</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Privacy <span class="ur">رازداری</span></h2>
+      <ul class="checklist">
         <li>No form image or field value leaves this device unless you explicitly sync.</li>
-        <li>Only a SHA-256 fingerprint of each source image is stored, for chain-of-custody — not the image.</li>
+        <li>Only a SHA-256 fingerprint of each source image is stored — for chain-of-custody, not the image.</li>
+        <li>Sync, where enabled, sends values and hashes over HTTPS to a server the partner controls.</li>
         <li>For CNIC / health data, follow the partnering programme's existing consent process.</li>
       </ul>
-      <p class="help" id="verLine">Open-source engine · offline-first · v0.7</p>
+      <p class="help">Full text: <a href="#" id="policyLink">data-handling policy</a> ·
+        this is a starting point for a pilot, not legal advice.</p>
+    </div>
+    <div class="card">
+      <h2>Open source <span class="ur">اوپن سورس</span></h2>
+      <p class="prose">The recognition engine and tooling are open-source and auditable — partners
+        can self-host and inspect every line that touches their data. A managed paid tier (hosted
+        dashboards, DISCO billing integration, support) funds the team.</p>
+      <p class="help" id="verLine">Engine: NumPy · UI: FastAPI + vanilla JS · offline-first · v0.8</p>
     </div>
   </section>
 
@@ -176,7 +439,10 @@
 
 <footer>
   Raqam is an independent, open-source project. Government and NGO pilots use the free self-hosted
-  engine. <span class="ur">یہ ایک آزاد، اوپن سورس منصوبہ ہے۔</span>
+  engine. <span class="ur">یہ ایک آزاد، اوپن سورس منصوبہ ہے۔</span><br>
+  <a href="/api/export.csv">Server records (CSV)</a>
+  <a href="#" id="aboutJump">About &amp; privacy</a>
+  <a href="#" id="programJump">Program brief</a>
 </footer>
 
 <script type="module" src="/static/app.js"></script>

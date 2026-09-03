@@ -65,6 +65,13 @@ def sw():
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/policy")
+def policy():
+    p = Path(__file__).resolve().parent.parent.parent / "docs" / "data-handling-policy.md"
+    return FileResponse(p, media_type="text/markdown") if p.exists() \
+        else JSONResponse({"error": "policy doc not found"}, status_code=404)
+
+
 @app.get("/static/numerals_cnn.json")
 def model_json():
     p = _MODELS / "numerals_cnn.json"

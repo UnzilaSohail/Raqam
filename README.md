@@ -43,6 +43,8 @@ load the app works with the network off:
 - **Review queue** / **Records** / **Export CSV** — all client-side, offline.
 - **Sync to server** when connected — sends values + image hashes, never the image.
 - **Dashboard** — auto-accept rate, pending count, per-form breakdown, Phase-9 eval metrics.
+- **Program** — the brief in the app: the problem, six sectors ranked by pilot-readiness,
+  the elections position, roadmap, funding (Ignite), sustainability, risks.
 
 ## Datasets
 

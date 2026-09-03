@@ -37,13 +37,18 @@ addEventListener('offline', setConn);
 setConn();
 
 /* ---------------- tabs ---------------- */
-$$('nav.tabs button').forEach(b => b.onclick = () => {
-  $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-  $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + b.dataset.tab));
-  if (b.dataset.tab === 'review') renderReview();
-  if (b.dataset.tab === 'records') renderRecords();
-  if (b.dataset.tab === 'dashboard') renderDashboard();
-});
+function selectTab(name) {
+  $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === name));
+  $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  if (name === 'review') renderReview();
+  if (name === 'records') renderRecords();
+  if (name === 'dashboard') renderDashboard();
+  scrollTo(0, 0);
+}
+$$('nav.tabs button').forEach(b => b.onclick = () => selectTab(b.dataset.tab));
+const jump = (id, tab) => { const el = $(id); if (el) el.onclick = e => { e.preventDefault(); selectTab(tab); }; };
+jump('#aboutJump', 'about'); jump('#programJump', 'program');
+{ const p = $('#policyLink'); if (p) { p.href = '/policy'; p.target = '_blank'; } }
 
 /* ---------------- scan ---------------- */
 async function sha256(buf) {
