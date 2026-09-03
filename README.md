@@ -5,9 +5,6 @@ confidence triage — every low-confidence digit is flagged for a human, never
 silently guessed. Recognizes Western digits (0–9) **and** Urdu-Indic / Perso-Arabic
 numerals (۰–۹) natively.
 
-An **independent tool, not an official record system.** See
-[docs/data-handling-policy.md](docs/data-handling-policy.md).
-
 ## Quickstart
 
 ```bash
