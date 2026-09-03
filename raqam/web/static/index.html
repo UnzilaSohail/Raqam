@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raqam</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 1.5rem;
+         max-width: 900px; margin-inline: auto; }
+  h1 { margin: 0 0 .2rem; } .sub { opacity: .7; margin: 0 0 1.5rem; }
+  section { border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+            border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
+  h2 { margin: 0 0 .8rem; font-size: 1.05rem; }
+  button { font: inherit; padding: .45rem .9rem; border-radius: 7px; cursor: pointer;
+           border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+           background: color-mix(in srgb, currentColor 8%, transparent); }
+  button:disabled { opacity: .5; cursor: default; }
+  canvas { border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+           border-radius: 6px; touch-action: none; }
+  #chart { width: 100%; height: 120px; display: block; }
+  .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
+  .bars { flex: 1; min-width: 220px; }
+  .bar { display: flex; align-items: center; gap: .5rem; font-variant-numeric: tabular-nums; }
+  .bar > i { display: inline-block; height: 12px; background: currentColor; border-radius: 2px; }
+  .tiles img, #review img { image-rendering: pixelated; }
+  #review img { image-rendering: auto; max-width: 100%; border-radius: 6px; }
+  .tiles { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tiles figure { margin: 0; text-align: center; font-size: 12px; }
+  .tiles img { width: 56px; height: 56px; background: #000; }
+  code { background: color-mix(in srgb, currentColor 12%, transparent); padding: .1rem .3rem; border-radius: 4px; }
+  .flag { color: #d33; font-weight: 600; } .ok { color: #2a2; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { text-align: left; padding: .3rem .5rem; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+  input[type=text] { font: inherit; padding: .3rem; border-radius: 5px;
+    border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
+</style>
+</head>
+<body>
+<h1>Raqam <span style="opacity:.5">رقم</span></h1>
+<p class="sub">Offline handwritten-digit digitizer for paper forms — NumPy engine, confidence triage.</p>
+
+<section>
+  <h2>1 · Train (watch it think)</h2>
+  <button id="trainBtn">Train 3 epochs</button>
+  <span id="trainStat"></span>
+  <canvas id="chart" width="860" height="120"></canvas>
+</section>
+
+<section>
+  <h2>2 · Dreams — what the net thinks each digit looks like</h2>
+  <button id="dreamBtn">Generate</button>
+  <div class="tiles" id="dreams"></div>
+</section>
+
+<section>
+  <h2>3 · Draw &amp; predict</h2>
+  <div class="row">
+    <div>
+      <canvas id="pad" width="280" height="280"></canvas><br>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div class="bars" id="probs"></div>
+  </div>
+</section>
+
+<section>
+  <h2>4 · Scan a form field</h2>
+  <p class="sub">A photo of a printed row of digit boxes. No real template? Use
+  <code>python -m raqam.cli scan</code> with a synthetic one.</p>
+  field name <input type="text" id="fieldName" value="roll_no">
+  <input type="file" id="scanFile" accept="image/*">
+  <div id="scanOut"></div>
+</section>
+
+<section>
+  <h2>5 · Review queue</h2>
+  <button id="refreshBtn">Refresh</button>
+  <a href="/api/export.csv"><button>Export CSV</button></a>
+  <div id="review"></div>
+</section>
+
+<script>
+const $ = s => document.querySelector(s);
+
+// ---- 1. training chart ------------------------------------------------
+const cx = $('#chart').getContext('2d');
+let hist = [];
+function drawChart() {
+  const W = 860, H = 120; cx.clearRect(0, 0, W, H);
+  if (hist.length < 2) return;
+  const maxL = Math.max(...hist.map(h => h.loss));
+  cx.strokeStyle = '#e0693e'; cx.beginPath();
+  hist.forEach((h, i) => {
+    const x = i / (hist.length - 1) * W, y = H - (h.loss / maxL) * H * 0.9 - 5;
+    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
+  });
+  cx.stroke();
+  cx.strokeStyle = '#3e8ee0'; cx.beginPath();
+  hist.filter(h => h.val_acc != null).forEach((h, i, a) => {
+    const x = i / Math.max(1, a.length - 1) * W, y = H - h.val_acc * H * 0.9 - 5;
+    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
+  });
+  cx.stroke();
+}
+$('#trainBtn').onclick = () => {
+  hist = []; $('#trainBtn').disabled = true;
+  const es = new EventSource('/api/train?epochs=3');
+  es.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.done) { es.close(); $('#trainBtn').disabled = false;
+      $('#trainStat').textContent = ` final val acc ${(m.val_acc*100).toFixed(2)}%`; return; }
+    hist.push(m);
+    $('#trainStat').textContent = ` epoch ${m.epoch} · step ${m.step} · loss ${m.loss.toFixed(3)}`
+      + (m.val_acc ? ` · val ${(m.val_acc*100).toFixed(1)}%` : '');
+    drawChart();
+  };
+  es.onerror = () => { es.close(); $('#trainBtn').disabled = false; };
+};
+
+// ---- 2. dreams -----------------------------------------------------
+$('#dreamBtn').onclick = async () => {
+  $('#dreamBtn').disabled = true; $('#dreams').textContent = 'dreaming…';
+  const r = await fetch('/api/dreams').then(r => r.json());
+  $('#dreams').innerHTML = r.tiles.map((src, d) =>
+    `<figure><img src="${src}"><figcaption>${d}</figcaption></figure>`).join('');
+  $('#dreamBtn').disabled = false;
+};
+
+// ---- 3. draw & predict -------------------------------------------
+const pad = $('#pad'), pc = pad.getContext('2d');
+pc.lineWidth = 22; pc.lineCap = 'round'; pc.strokeStyle = '#fff';
+function clearPad() { pc.fillStyle = '#000'; pc.fillRect(0, 0, 280, 280); $('#probs').innerHTML = ''; }
+clearPad();
+$('#clearBtn').onclick = clearPad;
+let drawing = false;
+const pos = e => { const r = pad.getBoundingClientRect();
+  return [(e.touches?.[0]?.clientX ?? e.clientX) - r.left, (e.touches?.[0]?.clientY ?? e.clientY) - r.top]; };
+pad.addEventListener('pointerdown', e => { drawing = true; const [x, y] = pos(e); pc.beginPath(); pc.moveTo(x, y); });
+pad.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pos(e); pc.lineTo(x, y); pc.stroke(); });
+addEventListener('pointerup', () => { if (drawing) { drawing = false; predict(); } });
+
+function to28() {
+  // bounding-box crop + center of mass, MNIST-style
+  const src = pc.getImageData(0, 0, 280, 280).data;
+  let minx = 280, miny = 280, maxx = 0, maxy = 0;
+  for (let y = 0; y < 280; y++) for (let x = 0; x < 280; x++) {
+    if (src[(y*280+x)*4] > 20) { minx=Math.min(minx,x); miny=Math.min(miny,y); maxx=Math.max(maxx,x); maxy=Math.max(maxy,y); }
+  }
+  if (maxx < minx) return new Array(784).fill(0);
+  const gw = maxx-minx+1, gh = maxy-miny+1, s = 20 / Math.max(gw, gh);
+  const t = document.createElement('canvas'); t.width = t.height = 28;
+  const tc = t.getContext('2d'); tc.fillStyle = '#000'; tc.fillRect(0,0,28,28);
+  const dw = Math.round(gw*s), dh = Math.round(gh*s);
+  tc.drawImage(pad, minx, miny, gw, gh, (28-dw)/2, (28-dh)/2, dw, dh);
+  const d = tc.getImageData(0,0,28,28).data; const px = [];
+  let sx=0, sy=0, tot=0;
+  for (let i=0;i<784;i++){ const v=d[i*4]/255; px.push(v); sx+=(i%28)*v; sy+=((i/28)|0)*v; tot+=v; }
+  if (tot>0){ const shx=Math.round(14-sx/tot), shy=Math.round(14-sy/tot); const out=new Array(784).fill(0);
+    for(let y=0;y<28;y++)for(let x=0;x<28;x++){const nx=x+shx,ny=y+shy;
+      if(nx>=0&&nx<28&&ny>=0&&ny<28) out[ny*28+nx]=px[y*28+x];} return out; }
+  return px;
+}
+async function predict() {
+  const r = await fetch('/api/predict', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({pixels: to28()})}).then(r => r.json());
+  $('#probs').innerHTML = `<b>prediction: ${r.digit}</b><br>` + r.probs.map((p, d) =>
+    `<div class="bar"><span>${d}</span><i style="width:${Math.round(p*180)}px"></i><span>${(p*100).toFixed(1)}%</span></div>`).join('');
+}
+
+// ---- 4. scan -----------------------------------------------------
+$('#scanFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('#scanOut').textContent = 'scanning…';
+  const fd = new FormData(); fd.append('file', f);
+  const r = await fetch(`/api/scan?field=${encodeURIComponent($('#fieldName').value)}&form=web`,
+    {method:'POST', body: fd}).then(r => r.json());
+  if (r.error) { $('#scanOut').textContent = r.error; return; }
+  const cells = r.cells.map(c => `<span class="${c.flagged?'flag':'ok'}">${c.flagged?'?':c.digit}</span>`).join(' ');
+  $('#scanOut').innerHTML =
+    `<p>#${r.id} &nbsp; <b>${r.field} = ${r.value}</b> ${r.needs_review?'<span class="flag">NEEDS REVIEW</span>':'<span class="ok">auto-accepted</span>'}</p>
+     <p>${cells}</p>
+     <p>${r.cells.map(c => c.confidence.toFixed(2)).join(' &nbsp; ')}</p>
+     <img src="${r.review_image}">`;
+  loadReview();
+};
+
+// ---- 5. review queue -------------------------------------------
+async function loadReview() {
+  const rows = await fetch('/api/pending').then(r => r.json());
+  if (!rows.length) { $('#review').innerHTML = '<p class="sub">nothing pending.</p>'; return; }
+  $('#review').innerHTML = '<table><tr><th>#</th><th>form/field</th><th>value</th><th>corrected</th><th></th></tr>' +
+    rows.map(r => `<tr><td>${r.id}</td><td>${r.form}/${r.field}</td><td>${r.value}</td>
+      <td><input type="text" id="fix${r.id}" value="${r.value.replace(/\?/g,'')}"></td>
+      <td><button onclick="resolve(${r.id})">save</button></td></tr>`).join('') + '</table>';
+}
+async function resolve(id) {
+  await fetch('/api/resolve', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({id, value: $('#fix'+id).value})});
+  loadReview();
+}
+$('#refreshBtn').onclick = loadReview;
+loadReview();
+</script>
+</body>
+</html>
