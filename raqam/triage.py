@@ -39,15 +39,12 @@ class Triage:
         self.threshold = threshold
 
     @classmethod
-    def calibrate(cls, net: MLP, x_val, y_val, threshold: float = 0.90):
-        # logits = pre-softmax output of the last layer
-        _, acts, _ = net.forward(x_val, cache=True)
-        t = fit_temperature(acts[-1], y_val)
+    def calibrate(cls, net, x_val, y_val, threshold: float = 0.90):
+        t = fit_temperature(net.logits(x_val), y_val)
         return cls(net, t, threshold)
 
     def proba(self, x):
-        _, acts, _ = self.net.forward(x, cache=True)
-        return _softmax(acts[-1] / self.t)
+        return _softmax(self.net.logits(x) / self.t)
 
     def run(self, cells_x: np.ndarray) -> list[Cell]:
         p = self.proba(cells_x)

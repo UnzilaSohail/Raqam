@@ -69,10 +69,20 @@ def find_digit_cells(gray: np.ndarray, min_frac=0.010, max_frac=0.15,
 
 def _dedupe(boxes, iou_thresh=0.6):
     keep = []
-    for b in sorted(boxes, key=lambda b: -b[2] * b[3]):
-        if all(_iou(b, k) < iou_thresh for k in keep):
-            keep.append(b)
+    for b in sorted(boxes, key=lambda b: -b[2] * b[3]):  # largest first
+        if any(_iou(b, k) >= iou_thresh or _contained(b, k) for k in keep):
+            continue  # near-duplicate, or a digit's own contour nested in a kept box
+        keep.append(b)
     return keep
+
+
+def _contained(inner, outer, margin=4):
+    ix, iy, iw, ih = inner
+    ox, oy, ow, oh = outer
+    cx, cy = ix + iw / 2, iy + ih / 2
+    return (ox - margin <= cx <= ox + ow + margin
+            and oy - margin <= cy <= oy + oh + margin
+            and iw * ih < 0.9 * ow * oh)
 
 
 def _iou(a, b):

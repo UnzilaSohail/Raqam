@@ -2,63 +2,72 @@
 
 Offline handwritten-digit digitizer for paper forms. From-scratch NumPy engine,
 confidence triage — every low-confidence digit is flagged for a human, never
-silently guessed.
+silently guessed. Recognizes Western digits (0–9) **and** Urdu-Indic / Perso-Arabic
+numerals (۰–۹) natively.
 
-Covers Phases 1–6 of [project-raqam.md](project-raqam.md): the learning engine
-(MLP, live training, "dreams", draw-and-predict) plus the confidence-triage form
-scanner. Phase 7 (CNN + Urdu-Indic numerals), Phase 8 (Android) and the pilots
-are not here — they need datasets, form templates and a partner (see bottom).
+An **independent tool, not an official record system.** See
+[docs/data-handling-policy.md](docs/data-handling-policy.md).
 
 ## Quickstart
 
 ```bash
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt        # Linux/mac: .venv/bin/pip
-.venv/Scripts/python -m raqam.train                  # downloads MNIST, ~10s, saves models/mnist_mlp.npz
-.venv/Scripts/python -m raqam.cli serve              # http://127.0.0.1:8000
+.venv/Scripts/pip install -r requirements.txt          # Linux/mac: .venv/bin/pip
+.venv/Scripts/python -m raqam.train                    # MLP on MNIST, ~10s
+.venv/Scripts/python -m raqam.train --model cnn --data numerals --epochs 8   # CNN on MNIST+HODA, ~12 min
+.venv/Scripts/python -m raqam.cli serve                # http://127.0.0.1:8000  → install as an app
 ```
 
-`python selfcheck.py` runs every module's built-in check.
+`python selfcheck.py` runs every module's built-in check. Docker: see [docs/deploy.md](docs/deploy.md).
 
-## What's where
+## Phase map (all built)
 
-| Plan phase | Module | Notes |
+| Plan phase | What | Where |
 |---|---|---|
-| 1 – network core | `raqam/mlp.py` | ReLU MLP, hand-written backprop, SGD+momentum. Grad-checked. 97.8% test. |
-| 2 – live training viz | `raqam/train.py`, `/api/train` SSE | loss + val-accuracy streamed to the browser chart |
-| 3 – "dreams" | `raqam/dreams.py` | gradient ascent on the input per class |
-| 4 – draw & predict | web canvas → `/api/predict` | canvas is centered by mass, MNIST-style |
-| 5 – confidence triage | `raqam/triage.py` | temperature-scaled softmax + threshold routing |
-| 6 – scanner pipeline | `raqam/segment.py`, `raqam/pipeline.py` | OpenCV deskew → box detection → 28×28 cells → triage → CSV/XLSX |
-| 5 – offline queue | `raqam/store.py` | local SQLite, stores only a SHA-256 of the source image |
+| 1 · network core | from-scratch ReLU MLP, hand-written backprop, gradient-checked | [raqam/mlp.py](raqam/mlp.py) |
+| 2 · live training viz | loss + val-accuracy streamed to a chart while it trains | [raqam/train.py](raqam/train.py), `/api/train` |
+| 3 · "dreams" | gradient ascent on the input — what each digit looks like to the net | [raqam/dreams.py](raqam/dreams.py) |
+| 4 · draw & predict | canvas → centred 28×28 → live probabilities | Engine tab |
+| 5 · confidence triage | temperature-scaled softmax + threshold routing; CSV/XLSX export | [raqam/triage.py](raqam/triage.py) |
+| 6 · scanner pipeline | OpenCV deskew → printed-box detection → MNIST-style cells → triage | [raqam/segment.py](raqam/segment.py), [raqam/pipeline.py](raqam/pipeline.py) |
+| 7 · CNN + Urdu numerals | from-scratch NumPy CNN (im2col, Adam); trained on MNIST ∪ HODA, one 0–9 model for both scripts | [raqam/cnn.py](raqam/cnn.py), [raqam/data.py](raqam/data.py) |
+| 8 · offline field app | installable PWA: on-device inference (JS port of the CNN), IndexedDB queue, camera capture, opportunistic sync — phone **and** desktop | [raqam/web/](raqam/web/) |
+| 9 · pilot evaluation | measures digit error rate (pre/post review), auto-accept rate, time vs. manual | [raqam/evaluate.py](raqam/evaluate.py), Dashboard tab |
+| 10 · packaging / sustainability | Docker + compose, one-command deploy, data-handling policy, open-core split | [Dockerfile](Dockerfile), [docs/](docs/) |
 
-## CLI
+## The offline app
 
-```bash
-python -m raqam.cli scan form.jpg --form marksheet --field roll_no
-python -m raqam.cli list                 # pending review
-python -m raqam.cli review 3 12345       # resolve a flagged record
-python -m raqam.cli export out.xlsx
-```
+`serve`, then **Install app** / **Add to Home Screen** in the browser. After the first
+load the app works with the network off:
 
-No real form? `raqam.segment.synth_form([1,2,3,4,5,6])` renders a printed box
-row with real MNIST glyphs to test the pipeline end to end.
+- **Scan** a printed row of digit boxes → per-digit confidence, flagged digits in red,
+  annotated review image. Recognition runs in the browser (`raqam/web/static/recognize.js`,
+  a hand-written JS port of the CNN + a connected-components box finder).
+- **Review queue** / **Records** / **Export CSV** — all client-side, offline.
+- **Sync to server** when connected — sends values + image hashes, never the image.
+- **Dashboard** — auto-accept rate, pending count, per-form breakdown, Phase-9 eval metrics.
 
-## Deliberate shortcuts (see `ponytail:` comments)
+## Datasets
 
-- **`store.py`** — records stored as plaintext SQLite. Field-level encryption +
-  key management is a Phase-8 concern (shared field phone). Today's guarantee:
-  the raw image never lands on disk, only its hash.
-- **`segment.py`** — box-detection thresholds are tuned for a clean printed
-  row/grid. Real templates need per-form tuning; that knob is intentional.
-- **Calibration** — temperature is fit on a held-out slice of MNIST test.
-  A real deployment calibrates on real scanned samples of *that* form.
+- **MNIST** — standard Keras mirror.
+- **HODA** — public Perso-Arabic handwritten digits (farsiocr.ir), via the
+  `amir-saniyan/HodaDatasetReader` GitHub mirror. Perso-Arabic digits are the same glyphs
+  Urdu uses. 60k train / 20k test, auto-downloaded and cached to `data/`.
+  *Confirm HODA's licence terms before a production deployment; swap in a Pakistan-specific
+  Urdu set from a university partner when available — `load_hoda()` is the only thing to change.*
 
-## What this still needs from you
+## Deliberate shortcuts (`ponytail:` comments)
 
-1. **One real form** — a scanned marksheet / tally sheet + its blank template,
-   dummy data only. The segmentation step can't be made real without it.
-2. **Urdu-Indic numeral dataset** — pick one, check its licence. Needed before
-   Phase 7.
-3. **Pilot sector + partner** — the plan recommends education first.
-4. **Legal/privacy review + Ignite application** — yours, not code.
+- **Storage is plaintext** SQLite / IndexedDB. Field encryption + key management for shared
+  devices is deferred. Sensitive forms → single-operator devices + device lock/FDE for now.
+- **Box detection** thresholds suit a clean printed row/grid; real templates need per-form tuning.
+- **Perso-Arabic "0"** is a small dot; the MNIST-style normalizer scales it up like any glyph.
+- **Calibration** uses held-out MNIST/HODA; a real deployment re-calibrates on real scans.
+
+## What still needs you
+
+1. **One real scanned form + blank template** (dummy data). Phases 6–9 are validated against a
+   synthetic box-row generator until then.
+2. **Pakistan-specific Urdu digit dataset** (optional upgrade over HODA) — from a university partner.
+3. **Pilot sector + named partner** (plan recommends education first) — and the legal/privacy
+   review + Ignite application.

@@ -1,205 +1,184 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Raqam</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 1.5rem;
-         max-width: 900px; margin-inline: auto; }
-  h1 { margin: 0 0 .2rem; } .sub { opacity: .7; margin: 0 0 1.5rem; }
-  section { border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-            border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
-  h2 { margin: 0 0 .8rem; font-size: 1.05rem; }
-  button { font: inherit; padding: .45rem .9rem; border-radius: 7px; cursor: pointer;
-           border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-           background: color-mix(in srgb, currentColor 8%, transparent); }
-  button:disabled { opacity: .5; cursor: default; }
-  canvas { border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-           border-radius: 6px; touch-action: none; }
-  #chart { width: 100%; height: 120px; display: block; }
-  .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
-  .bars { flex: 1; min-width: 220px; }
-  .bar { display: flex; align-items: center; gap: .5rem; font-variant-numeric: tabular-nums; }
-  .bar > i { display: inline-block; height: 12px; background: currentColor; border-radius: 2px; }
-  .tiles img, #review img { image-rendering: pixelated; }
-  #review img { image-rendering: auto; max-width: 100%; border-radius: 6px; }
-  .tiles { display: flex; gap: 4px; flex-wrap: wrap; }
-  .tiles figure { margin: 0; text-align: center; font-size: 12px; }
-  .tiles img { width: 56px; height: 56px; background: #000; }
-  code { background: color-mix(in srgb, currentColor 12%, transparent); padding: .1rem .3rem; border-radius: 4px; }
-  .flag { color: #d33; font-weight: 600; } .ok { color: #2a2; }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  td, th { text-align: left; padding: .3rem .5rem; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
-  input[type=text] { font: inherit; padding: .3rem; border-radius: 5px;
-    border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#01411C">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/app.css">
+<title>Raqam — Form Digitizer</title>
 </head>
 <body>
-<h1>Raqam <span style="opacity:.5">رقم</span></h1>
-<p class="sub">Offline handwritten-digit digitizer for paper forms — NumPy engine, confidence triage.</p>
 
-<section>
-  <h2>1 · Train (watch it think)</h2>
-  <button id="trainBtn">Train 3 epochs</button>
-  <span id="trainStat"></span>
-  <canvas id="chart" width="860" height="120"></canvas>
-</section>
-
-<section>
-  <h2>2 · Dreams — what the net thinks each digit looks like</h2>
-  <button id="dreamBtn">Generate</button>
-  <div class="tiles" id="dreams"></div>
-</section>
-
-<section>
-  <h2>3 · Draw &amp; predict</h2>
-  <div class="row">
+<header class="masthead">
+  <div class="masthead__in">
+    <div class="crest">رقم</div>
     <div>
-      <canvas id="pad" width="280" height="280"></canvas><br>
-      <button id="clearBtn">Clear</button>
+      <h1>RAQAM — Handwritten Form Digitizer</h1>
+      <div class="sub"><span class="ur">دستی فارم ڈیجیٹائزیشن ٹول</span> · offline · confidence-triaged</div>
     </div>
-    <div class="bars" id="probs"></div>
+    <div class="masthead__spacer"></div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connText">Online</span></div>
   </div>
-</section>
+</header>
 
-<section>
-  <h2>4 · Scan a form field</h2>
-  <p class="sub">A photo of a printed row of digit boxes. No real template? Use
-  <code>python -m raqam.cli scan</code> with a synthetic one.</p>
-  field name <input type="text" id="fieldName" value="roll_no">
-  <input type="file" id="scanFile" accept="image/*">
-  <div id="scanOut"></div>
-</section>
+<div class="notice">
+  Independent digitization tool — <strong>not an official record system</strong>.
+  Every low-confidence digit is flagged for human review.
+  <span class="ur"> — یہ ایک آزاد ٹول ہے، کوئی سرکاری ریکارڈ سسٹم نہیں۔</span>
+</div>
 
-<section>
-  <h2>5 · Review queue</h2>
-  <button id="refreshBtn">Refresh</button>
-  <a href="/api/export.csv"><button>Export CSV</button></a>
-  <div id="review"></div>
-</section>
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="scan">Scan / <span class="ur">اسکین</span></button>
+  <button role="tab" aria-selected="false" data-tab="review">Review Queue / <span class="ur">جائزہ</span></button>
+  <button role="tab" aria-selected="false" data-tab="records">Records / <span class="ur">ریکارڈ</span></button>
+  <button role="tab" aria-selected="false" data-tab="dashboard">Dashboard / <span class="ur">ڈیش بورڈ</span></button>
+  <button role="tab" aria-selected="false" data-tab="engine">Engine / <span class="ur">انجن</span></button>
+  <button role="tab" aria-selected="false" data-tab="about">About / <span class="ur">تعارف</span></button>
+</nav>
 
-<script>
-const $ = s => document.querySelector(s);
+<main>
 
-// ---- 1. training chart ------------------------------------------------
-const cx = $('#chart').getContext('2d');
-let hist = [];
-function drawChart() {
-  const W = 860, H = 120; cx.clearRect(0, 0, W, H);
-  if (hist.length < 2) return;
-  const maxL = Math.max(...hist.map(h => h.loss));
-  cx.strokeStyle = '#e0693e'; cx.beginPath();
-  hist.forEach((h, i) => {
-    const x = i / (hist.length - 1) * W, y = H - (h.loss / maxL) * H * 0.9 - 5;
-    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
-  });
-  cx.stroke();
-  cx.strokeStyle = '#3e8ee0'; cx.beginPath();
-  hist.filter(h => h.val_acc != null).forEach((h, i, a) => {
-    const x = i / Math.max(1, a.length - 1) * W, y = H - h.val_acc * H * 0.9 - 5;
-    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
-  });
-  cx.stroke();
-}
-$('#trainBtn').onclick = () => {
-  hist = []; $('#trainBtn').disabled = true;
-  const es = new EventSource('/api/train?epochs=3');
-  es.onmessage = e => {
-    const m = JSON.parse(e.data);
-    if (m.done) { es.close(); $('#trainBtn').disabled = false;
-      $('#trainStat').textContent = ` final val acc ${(m.val_acc*100).toFixed(2)}%`; return; }
-    hist.push(m);
-    $('#trainStat').textContent = ` epoch ${m.epoch} · step ${m.step} · loss ${m.loss.toFixed(3)}`
-      + (m.val_acc ? ` · val ${(m.val_acc*100).toFixed(1)}%` : '');
-    drawChart();
-  };
-  es.onerror = () => { es.close(); $('#trainBtn').disabled = false; };
-};
+  <!-- SCAN -->
+  <section class="panel active" id="panel-scan">
+    <div class="card">
+      <h2>Digitize a form field <span class="ur">فارم کا خانہ ڈیجیٹائز کریں</span></h2>
+      <p class="help">Photograph one printed row/grid of digit boxes — a roll number, a tally count,
+        a meter reading. Works fully offline; results are saved to the local queue on this device.</p>
+      <div class="row">
+        <div>
+          <label for="formName">Form / register &nbsp; <span class="ur">فارم</span></label>
+          <input type="text" id="formName" value="marksheet" list="formList">
+          <datalist id="formList">
+            <option>marksheet</option><option>polio-tally</option><option>epi-tally</option>
+            <option>flood-registration</option><option>meter-reading</option><option>union-council-register</option>
+          </datalist>
+        </div>
+        <div>
+          <label for="fieldName">Field &nbsp; <span class="ur">خانہ</span></label>
+          <input type="text" id="fieldName" value="roll_no">
+        </div>
+        <div>
+          <label for="numeral">Show digits as &nbsp; <span class="ur">ہندسے</span></label>
+          <select id="numeral"><option value="western">0 1 2 3 (Western)</option>
+            <option value="urdu">۰ ۱ ۲ ۳ (Urdu)</option></select>
+        </div>
+      </div>
+      <div style="margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap; align-items:center">
+        <label class="btn" style="cursor:pointer; display:inline-block">
+          Take / choose photo
+          <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+        </label>
+        <button class="btn secondary" id="sampleBtn">Use sample form</button>
+        <span id="engineTag" class="help" style="margin:0"></span>
+      </div>
+      <div id="scanOut"></div>
+    </div>
+  </section>
 
-// ---- 2. dreams -----------------------------------------------------
-$('#dreamBtn').onclick = async () => {
-  $('#dreamBtn').disabled = true; $('#dreams').textContent = 'dreaming…';
-  const r = await fetch('/api/dreams').then(r => r.json());
-  $('#dreams').innerHTML = r.tiles.map((src, d) =>
-    `<figure><img src="${src}"><figcaption>${d}</figcaption></figure>`).join('');
-  $('#dreamBtn').disabled = false;
-};
+  <!-- REVIEW -->
+  <section class="panel" id="panel-review">
+    <div class="card">
+      <h2>Review queue <span class="ur">جائزہ فہرست</span></h2>
+      <p class="help">Records with at least one flagged digit. Correct the value and save —
+        the digit the model was unsure of is marked in red.</p>
+      <div id="reviewOut"></div>
+    </div>
+  </section>
 
-// ---- 3. draw & predict -------------------------------------------
-const pad = $('#pad'), pc = pad.getContext('2d');
-pc.lineWidth = 22; pc.lineCap = 'round'; pc.strokeStyle = '#fff';
-function clearPad() { pc.fillStyle = '#000'; pc.fillRect(0, 0, 280, 280); $('#probs').innerHTML = ''; }
-clearPad();
-$('#clearBtn').onclick = clearPad;
-let drawing = false;
-const pos = e => { const r = pad.getBoundingClientRect();
-  return [(e.touches?.[0]?.clientX ?? e.clientX) - r.left, (e.touches?.[0]?.clientY ?? e.clientY) - r.top]; };
-pad.addEventListener('pointerdown', e => { drawing = true; const [x, y] = pos(e); pc.beginPath(); pc.moveTo(x, y); });
-pad.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pos(e); pc.lineTo(x, y); pc.stroke(); });
-addEventListener('pointerup', () => { if (drawing) { drawing = false; predict(); } });
+  <!-- RECORDS -->
+  <section class="panel" id="panel-records">
+    <div class="card">
+      <h2>All records <span class="ur">تمام ریکارڈ</span></h2>
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.8rem">
+        <button class="btn secondary" id="expCsv">Export CSV</button>
+        <button class="btn secondary" id="expXlsx">Export Excel</button>
+        <button class="btn" id="syncBtn">Sync to server</button>
+        <span id="syncMsg" class="help" style="margin:0"></span>
+      </div>
+      <div id="recordsOut"></div>
+    </div>
+  </section>
 
-function to28() {
-  // bounding-box crop + center of mass, MNIST-style
-  const src = pc.getImageData(0, 0, 280, 280).data;
-  let minx = 280, miny = 280, maxx = 0, maxy = 0;
-  for (let y = 0; y < 280; y++) for (let x = 0; x < 280; x++) {
-    if (src[(y*280+x)*4] > 20) { minx=Math.min(minx,x); miny=Math.min(miny,y); maxx=Math.max(maxx,x); maxy=Math.max(maxy,y); }
-  }
-  if (maxx < minx) return new Array(784).fill(0);
-  const gw = maxx-minx+1, gh = maxy-miny+1, s = 20 / Math.max(gw, gh);
-  const t = document.createElement('canvas'); t.width = t.height = 28;
-  const tc = t.getContext('2d'); tc.fillStyle = '#000'; tc.fillRect(0,0,28,28);
-  const dw = Math.round(gw*s), dh = Math.round(gh*s);
-  tc.drawImage(pad, minx, miny, gw, gh, (28-dw)/2, (28-dh)/2, dw, dh);
-  const d = tc.getImageData(0,0,28,28).data; const px = [];
-  let sx=0, sy=0, tot=0;
-  for (let i=0;i<784;i++){ const v=d[i*4]/255; px.push(v); sx+=(i%28)*v; sy+=((i/28)|0)*v; tot+=v; }
-  if (tot>0){ const shx=Math.round(14-sx/tot), shy=Math.round(14-sy/tot); const out=new Array(784).fill(0);
-    for(let y=0;y<28;y++)for(let x=0;x<28;x++){const nx=x+shx,ny=y+shy;
-      if(nx>=0&&nx<28&&ny>=0&&ny<28) out[ny*28+nx]=px[y*28+x];} return out; }
-  return px;
-}
-async function predict() {
-  const r = await fetch('/api/predict', {method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({pixels: to28()})}).then(r => r.json());
-  $('#probs').innerHTML = `<b>prediction: ${r.digit}</b><br>` + r.probs.map((p, d) =>
-    `<div class="bar"><span>${d}</span><i style="width:${Math.round(p*180)}px"></i><span>${(p*100).toFixed(1)}%</span></div>`).join('');
-}
+  <!-- DASHBOARD -->
+  <section class="panel" id="panel-dashboard">
+    <div class="card">
+      <h2>District dashboard <span class="ur">ضلعی ڈیش بورڈ</span></h2>
+      <p class="help">Aggregate view of everything digitized on this device (and anything synced in).</p>
+      <div class="kpis" id="kpis"></div>
+    </div>
+    <div class="card">
+      <h2>By form type <span class="ur">فارم کی قسم کے لحاظ سے</span></h2>
+      <div id="byForm"></div>
+    </div>
+    <div class="card">
+      <h2>Pilot evaluation <span class="ur">پائلٹ جانچ</span></h2>
+      <p class="help">Phase-9 metrics: measured against a manual-entry baseline. Run
+        <code>python -m raqam.evaluate</code> on labelled scans to populate this.</p>
+      <div id="evalOut" class="help">No evaluation run recorded yet.</div>
+    </div>
+  </section>
 
-// ---- 4. scan -----------------------------------------------------
-$('#scanFile').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  $('#scanOut').textContent = 'scanning…';
-  const fd = new FormData(); fd.append('file', f);
-  const r = await fetch(`/api/scan?field=${encodeURIComponent($('#fieldName').value)}&form=web`,
-    {method:'POST', body: fd}).then(r => r.json());
-  if (r.error) { $('#scanOut').textContent = r.error; return; }
-  const cells = r.cells.map(c => `<span class="${c.flagged?'flag':'ok'}">${c.flagged?'?':c.digit}</span>`).join(' ');
-  $('#scanOut').innerHTML =
-    `<p>#${r.id} &nbsp; <b>${r.field} = ${r.value}</b> ${r.needs_review?'<span class="flag">NEEDS REVIEW</span>':'<span class="ok">auto-accepted</span>'}</p>
-     <p>${cells}</p>
-     <p>${r.cells.map(c => c.confidence.toFixed(2)).join(' &nbsp; ')}</p>
-     <img src="${r.review_image}">`;
-  loadReview();
-};
+  <!-- ENGINE -->
+  <section class="panel" id="panel-engine">
+    <div class="card">
+      <h2>Recognizer training <span class="ur">ماڈل کی تربیت</span></h2>
+      <p class="help">The learning engine — a from-scratch neural network. Watch the loss fall and
+        validation accuracy rise as it trains on handwritten digits.</p>
+      <button class="btn" id="trainBtn">Train (3 epochs)</button>
+      <span id="trainStat" class="help" style="margin:0"></span>
+      <canvas id="chart" width="1000" height="130"></canvas>
+      <p class="help">Orange = training loss · Green = validation accuracy</p>
+    </div>
+    <div class="card">
+      <h2>What the network learned <span class="ur">ماڈل نے کیا سیکھا</span></h2>
+      <p class="help">Each image is generated by pushing the network to imagine a digit — a check that
+        it has learned digit shapes, not noise.</p>
+      <button class="btn secondary" id="dreamBtn">Generate</button>
+      <div class="tiles" id="dreams" style="margin-top:.8rem"></div>
+    </div>
+    <div class="card">
+      <h2>Try it — draw a digit <span class="ur">ہندسہ لکھ کر آزمائیں</span></h2>
+      <div class="row">
+        <div>
+          <canvas id="pad" width="252" height="252"></canvas><br>
+          <button class="btn secondary" id="clearBtn" style="margin-top:.5rem">Clear</button>
+        </div>
+        <div class="bars" id="probs"></div>
+      </div>
+    </div>
+  </section>
 
-// ---- 5. review queue -------------------------------------------
-async function loadReview() {
-  const rows = await fetch('/api/pending').then(r => r.json());
-  if (!rows.length) { $('#review').innerHTML = '<p class="sub">nothing pending.</p>'; return; }
-  $('#review').innerHTML = '<table><tr><th>#</th><th>form/field</th><th>value</th><th>corrected</th><th></th></tr>' +
-    rows.map(r => `<tr><td>${r.id}</td><td>${r.form}/${r.field}</td><td>${r.value}</td>
-      <td><input type="text" id="fix${r.id}" value="${r.value.replace(/\?/g,'')}"></td>
-      <td><button onclick="resolve(${r.id})">save</button></td></tr>`).join('') + '</table>';
-}
-async function resolve(id) {
-  await fetch('/api/resolve', {method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({id, value: $('#fix'+id).value})});
-  loadReview();
-}
-$('#refreshBtn').onclick = loadReview;
-loadReview();
-</script>
+  <!-- ABOUT -->
+  <section class="panel" id="panel-about">
+    <div class="card">
+      <h2>About Raqam <span class="ur">رقم کے بارے میں</span></h2>
+      <p>Raqam (<span class="ur">رقم</span> — "figure, number") turns a photo of a handwritten form
+        field into structured data, on ordinary phones and low-cost computers, with no internet
+        connection and no cloud service. It recognizes both Western digits (0–9) and
+        Urdu-Indic numerals (<span class="ur">۰–۹</span>) natively.</p>
+      <p><strong>It is not an official or authoritative record system.</strong> It is a review-assist
+        tool. A person confirms every value the model is not confident about before it becomes data.</p>
+      <p class="ur">رقم ایک معاون آلہ ہے۔ یہ کوئی سرکاری ریکارڈ سسٹم نہیں۔ ماڈل جس ہندسے کے بارے میں
+        غیر یقینی ہو، اسے حتمی شکل دینے سے پہلے ایک فرد اس کی تصدیق کرتا ہے۔</p>
+      <h2 style="margin-top:1.2rem">Privacy <span class="ur">رازداری</span></h2>
+      <ul class="help">
+        <li>No form image or field value leaves this device unless you explicitly sync.</li>
+        <li>Only a SHA-256 fingerprint of each source image is stored, for chain-of-custody — not the image.</li>
+        <li>For CNIC / health data, follow the partnering programme's existing consent process.</li>
+      </ul>
+      <p class="help" id="verLine">Open-source engine · offline-first · v0.7</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Raqam is an independent, open-source project. Government and NGO pilots use the free self-hosted
+  engine. <span class="ur">یہ ایک آزاد، اوپن سورس منصوبہ ہے۔</span>
+</footer>
+
+<script type="module" src="/static/app.js"></script>
 </body>
 </html>

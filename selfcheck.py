@@ -5,8 +5,8 @@
 import runpy
 import sys
 
-MODULES = ["raqam.data", "raqam.mlp", "raqam.triage", "raqam.segment",
-           "raqam.store", "raqam.dreams", "raqam.pipeline"]
+MODULES = ["raqam.data", "raqam.mlp", "raqam.cnn", "raqam.triage", "raqam.segment",
+           "raqam.store", "raqam.dreams", "raqam.pipeline", "raqam.evaluate"]
 
 fail = 0
 for m in MODULES:

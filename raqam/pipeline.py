@@ -12,20 +12,34 @@ import numpy as np
 
 from .mlp import MLP
 from .segment import extract_fields
-from .train import MODEL
+from .train import CNN_MODEL, MODEL
 from .triage import Triage
 from . import store
 
 _MODEL_CACHE: dict[str, Triage] = {}
+ENGINE = "none"
+
+
+def _load_recognizer():
+    """CNN on MNIST+HODA if trained, else the MNIST MLP. Returns (net, test_set)."""
+    global ENGINE
+    from .data import load, load_numerals
+    if Path(CNN_MODEL).exists():
+        from .cnn import CNN
+        (_, _), (xte, yte) = load_numerals()
+        ENGINE = "CNN (MNIST+HODA)"
+        return CNN.load(CNN_MODEL), (xte, yte)
+    (_, _), (xte, yte) = load()
+    ENGINE = "MLP (MNIST)"
+    return MLP.load(MODEL), (xte, yte)
 
 
 def _triage(threshold: float) -> Triage:
     key = f"{threshold}"
     if key not in _MODEL_CACHE:
-        from .data import load
-        net = MLP.load(MODEL)
-        (_, _), (xte, yte) = load()
-        _MODEL_CACHE[key] = Triage.calibrate(net, xte[8000:], yte[8000:], threshold)
+        net, (xte, yte) = _load_recognizer()
+        n = min(6000, len(xte) // 3)
+        _MODEL_CACHE[key] = Triage.calibrate(net, xte[-n:], yte[-n:], threshold)
     return _MODEL_CACHE[key]
 
 
@@ -42,7 +56,7 @@ def digitize(image: np.ndarray, form: str, field: str, *, threshold: float = 0.9
         for c, b in zip(cells, boxes)
     ]
     rec = {"form": form, "field": field, "value": value, "needs_review": needs,
-           "img_sha256": sha, "cells": cell_rows}
+           "img_sha256": sha, "cells": cell_rows, "engine": ENGINE}
     if persist:
         rec["id"] = store.add(form, field, value, needs, sha, cell_rows)
     rec["_gray"] = gray

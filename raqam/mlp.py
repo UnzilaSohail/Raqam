@@ -43,6 +43,9 @@ class MLP:
     def predict(self, x):
         return self.forward(x).argmax(1)
 
+    def logits(self, x):
+        return self.forward(x, cache=True)[1][-1]
+
     # --- backward -------------------------------------------------------
     def _grads(self, x, y, l2=0.0):
         n = len(x)

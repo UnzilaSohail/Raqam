@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models      # trained recognizers (persist across restarts)
+      - ./data:/app/data          # dataset cache
+      - raqam-scans:/app/scans    # synced records queue (SQLite)
+    restart: unless-stopped
+
+  # one-off: docker compose run --rm trainer
+  trainer:
+    build: .
+    profiles: ["tools"]
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    command: python -m raqam.train --model cnn --data numerals --epochs 8
+
+volumes:
+  raqam-scans:
