@@ -153,24 +153,47 @@ export function segment(imgData) {
   const medH = boxes.map(b => b.h).sort((a, b) => a - b)[boxes.length >> 1];
   boxes.sort((a, b) => (Math.round(a.y / (medH * 0.7)) - Math.round(b.y / (medH * 0.7))) || a.x - b.x);
 
-  const cells = boxes.map(b => cellToMnist(gray, W, H, b, thr));
-  return { cells, boxes, w: W, h: H, gray };
+  // extract, then keep only boxes that actually contain a plausible glyph:
+  // interior ink fraction between 0.4% and 45% (empty boxes and solid blobs out)
+  const out = [];
+  for (const b of boxes) {
+    const { px, ink } = cellToMnist(gray, W, H, b, thr);
+    if (ink > 0.004 && ink < 0.45) out.push({ box: b, px });
+  }
+  // a lone box with weak evidence is almost always background noise, not a field
+  if (out.length === 1 && !hasInkRun(gray, W, thr, out[0].box)) {
+    return { cells: [], boxes: [], w: W, h: H, gray };
+  }
+  return { cells: out.map(o => o.px), boxes: out.map(o => o.box), w: W, h: H, gray };
+}
+
+// is there a horizontal run of ink (a digit strip) roughly where this box sits?
+function hasInkRun(gray, W, thr, box) {
+  const y = Math.round(box.y + box.h / 2);
+  let run = 0, best = 0;
+  for (let x = box.x - box.w; x < box.x + 2 * box.w; x++) {
+    if (x < 0 || x >= W) continue;
+    if (gray[y * W + x] < thr) { run++; best = Math.max(best, run); } else run = 0;
+  }
+  return best > box.w * 0.15;
 }
 
 function cellToMnist(gray, W, H, box, thr) {
   const pad = Math.round(Math.min(box.w, box.h) * 0.16);
   const x0 = box.x + pad, y0 = box.y + pad;
   const cw = box.w - 2 * pad, ch = box.h - 2 * pad;
-  if (cw < 4 || ch < 4) return new Float32Array(784);
-  let minx = cw, miny = ch, maxx = 0, maxy = 0;
+  const EMPTY = { px: new Float32Array(784), ink: 0 };
+  if (cw < 4 || ch < 4) return EMPTY;
+  let minx = cw, miny = ch, maxx = 0, maxy = 0, inkPx = 0;
   const local = new Float32Array(cw * ch);
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
     const g = gray[(y0 + y) * W + (x0 + x)];
     const v = g < thr ? (thr - g) / thr : 0;
     local[y * cw + x] = v;
-    if (v > 0.15) { if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; }
+    if (v > 0.15) { inkPx++; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; }
   }
-  if (maxx <= minx) return new Float32Array(784);
+  const inkFrac = inkPx / (cw * ch);
+  if (maxx <= minx) return EMPTY;
   const gw = maxx - minx + 1, gh = maxy - miny + 1;
   const s = 20 / Math.max(gw, gh);
   const dw = Math.max(1, Math.round(gw * s)), dh = Math.max(1, Math.round(gh * s));
@@ -191,8 +214,8 @@ function cellToMnist(gray, W, H, box, thr) {
         const nx = x + shx, ny = y + shy;
         if (nx >= 0 && nx < 28 && ny >= 0 && ny < 28) shifted[ny * 28 + nx] = out[y * 28 + x];
       }
-      return shifted;
+      return { px: shifted, ink: inkFrac };
     }
   }
-  return out;
+  return { px: out, ink: inkFrac };
 }

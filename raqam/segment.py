@@ -136,10 +136,27 @@ def _shift(a, dx, dy):
     return cv2.warpAffine(a, m, (a.shape[1], a.shape[0]))
 
 
+def _cell_ink_frac(gray: np.ndarray, box, pad_frac=0.14) -> float:
+    x, y, w, h = box
+    p = int(min(w, h) * pad_frac)
+    crop = gray[y + p:y + h - p, x + p:x + w - p]
+    if crop.size == 0:
+        return 0.0
+    return float((binarize(crop) > 0).mean())
+
+
 def extract_fields(img: np.ndarray):
-    """Full path: image -> (list of 784-vectors, list of boxes)."""
+    """Full path: image -> (cells, boxes, gray).
+
+    A box is kept only if its interior holds a plausible glyph (ink fraction
+    0.4%–45%). Empty boxes, solid blobs and background rectangles are dropped;
+    a lone weak box is treated as noise (returns nothing).
+    """
     gray = deskew(to_gray(img))
-    boxes = find_digit_cells(gray)
+    boxes = [b for b in find_digit_cells(gray)
+             if 0.004 < _cell_ink_frac(gray, b) < 0.45]
+    if len(boxes) == 1 and _cell_ink_frac(gray, boxes[0]) < 0.02:
+        boxes = []
     cells = np.stack([cell_to_mnist(gray, b).ravel() for b in boxes]) \
         if boxes else np.zeros((0, 784), "float32")
     return cells, boxes, gray

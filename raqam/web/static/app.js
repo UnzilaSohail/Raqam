@@ -1,4 +1,4 @@
-import { loadModel, modelReady, classify, segment } from '/static/recognize.js';
+import { loadModel, modelReady, classify, segment } from '/static/recognize.js?v=12';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -135,6 +135,11 @@ async function runScan(blob) {
   } catch (e) {
     rec = await digitizeOffline(canvas);            // graceful fallback
   }
+  if (!rec.cells || !rec.cells.length) {            // nothing read — don't save a record
+    renderScanResult({ cells: [], value: '', needsReview: false, form: '', field: '' });
+    $('#engineTag').textContent = '';
+    return;
+  }
   const imgSha = await sha256(await blob.arrayBuffer());
   const stored = {
     ts: Date.now(), form: $('#formName').value, field: $('#fieldName').value,
@@ -148,9 +153,19 @@ async function runScan(blob) {
 }
 
 function renderScanResult(rec, reviewImg) {
-  const digits = rec.cells.length
-    ? rec.cells.map(c => `<span class="d ${c.flagged ? 'flag' : 'ok'}">${showDigit(c.flagged ? '?' : String(c.digit))}</span>`).join('')
-    : '<span class="help">No digit boxes detected — try a straighter, closer photo.</span>';
+  if (!rec.cells.length) {
+    $('#scanOut').innerHTML = `
+      <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line)">
+        <p><span class="pill warn">nothing read</span> — not saved.</p>
+        <p class="help">No digit boxes found. Raqam reads <strong>handwritten digits inside a
+        printed row of boxes</strong> — a roll-number strip, a tally column, a handwritten
+        meter-reading slip. It is not built for a digital meter's own LCD, free-form handwriting
+        with no boxes, or a full page. Try a straight, close, well-lit photo of just the boxed field.</p>
+      </div>`;
+    return;
+  }
+  const digits = rec.cells.map(c =>
+    `<span class="d ${c.flagged ? 'flag' : 'ok'}">${showDigit(c.flagged ? '?' : String(c.digit))}</span>`).join('');
   const conf = rec.cells.map(c => (c.confidence * 100 | 0) + '%').join('  ');
   $('#scanOut').innerHTML = `
     <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line)">
