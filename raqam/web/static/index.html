@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#01411C">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/app.css?v=10">
 <title>Raqam — Form Digitizer</title>
 </head>
 <body>
@@ -60,21 +60,26 @@
       <div class="row">
         <div>
           <label for="formName">Form / register <span class="ur">فارم</span></label>
-          <input type="text" id="formName" value="marksheet" list="formList">
-          <datalist id="formList">
-            <option>marksheet</option><option>polio-tally</option><option>epi-tally</option>
-            <option>flood-registration</option><option>meter-reading</option><option>union-council-register</option>
-          </datalist>
+          <select id="formName"></select>
         </div>
         <div>
           <label for="fieldName">Field <span class="ur">خانہ</span></label>
-          <input type="text" id="fieldName" value="roll_no">
+          <select id="fieldName"></select>
         </div>
         <div>
           <label for="numeral">Show digits as <span class="ur">ہندسے</span></label>
           <select id="numeral">
             <option value="western">0 1 2 3 — Western</option>
             <option value="urdu">۰ ۱ ۲ ۳ — Urdu</option>
+          </select>
+        </div>
+        <div>
+          <label for="thresh">Auto-accept above <span class="ur">حد</span></label>
+          <select id="thresh">
+            <option value="0.90">90% — permissive</option>
+            <option value="0.95" selected>95% — balanced</option>
+            <option value="0.98">98% — cautious</option>
+            <option value="0.99">99% — strictest</option>
           </select>
         </div>
       </div>
@@ -108,6 +113,7 @@
         <button class="btn secondary" id="expCsv">Export CSV</button>
         <button class="btn secondary" id="expXlsx">Export Excel (synced)</button>
         <button class="btn" id="syncBtn">Sync to server</button>
+        <button class="btn secondary" id="wipeBtn" style="border-color:var(--red); color:var(--red)">Clear this device</button>
         <span id="syncMsg" class="help" style="margin:0"></span>
       </div>
       <div class="scroll-x" id="recordsOut"></div>
@@ -357,7 +363,7 @@
             <tr><td>Tool perceived as an official/authoritative source in a dispute (esp. elections)</td><td><span class="pill flag">High</span></td>
               <td>Explicit non-goals in every deployment agreement; elections pillar deferred and legally reviewed first.</td></tr>
             <tr><td>Sensitive data (CNIC, health) mishandled or leaked</td><td><span class="pill flag">High</span></td>
-              <td>On-device by default, encrypted storage, no raw-image retention beyond a hash, partner-aligned consent.</td></tr>
+              <td>On-device by default; no raw-image retention beyond a hash; partner-aligned consent. Field-level encryption for shared devices is on the hardening list — until then, single-operator devices + device lock/full-disk encryption.</td></tr>
             <tr><td>Low trust from field staff (fear of being replaced or blamed)</td><td><span class="pill warn">Medium</span></td>
               <td>Positioned as a review-assist tool; field staff involved in pilot design, not just rollout.</td></tr>
             <tr><td>Funding runs out before the commercial track matures</td><td><span class="pill warn">Medium</span></td>
@@ -420,7 +426,9 @@
       <ul class="checklist">
         <li>No form image or field value leaves this device unless you explicitly sync.</li>
         <li>Only a SHA-256 fingerprint of each source image is stored — for chain-of-custody, not the image.</li>
-        <li>Sync, where enabled, sends values and hashes over HTTPS to a server the partner controls.</li>
+        <li>Sync is manual and per-record — nothing is transmitted until an operator presses Sync;
+          it then sends values and hashes over HTTPS to a server the partner controls.</li>
+        <li><strong>Records → Clear this device</strong> wipes the local queue completely.</li>
         <li>For CNIC / health data, follow the partnering programme's existing consent process.</li>
       </ul>
       <p class="help">Full text: <a href="#" id="policyLink">data-handling policy</a> ·
@@ -445,6 +453,6 @@
   <a href="#" id="programJump">Program brief</a>
 </footer>
 
-<script type="module" src="/static/app.js"></script>
+<script type="module" src="/static/app.js?v=10"></script>
 </body>
 </html>

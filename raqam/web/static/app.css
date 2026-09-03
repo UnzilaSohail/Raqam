@@ -232,3 +232,11 @@ code { background: var(--green-050); padding: .1rem .35rem; border-radius: 3px; 
   .digits { font-size: 1.3rem; letter-spacing: .18rem; }
   .sector { grid-template-columns: 1.8rem 1fr; }
 }
+@media (max-width: 400px) {
+  .masthead__in { flex-wrap: wrap; gap: .5rem; padding: .55rem .8rem; }
+  .masthead h1 { font-size: .92rem; }
+  .masthead .sub { display: none; }
+  .conn { order: 3; width: 100%; font-size: .72rem; }
+  main { padding: .8rem; }
+  .card { padding: .9rem; }
+}

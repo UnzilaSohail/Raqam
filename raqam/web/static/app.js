@@ -5,6 +5,27 @@ const $$ = s => [...document.querySelectorAll(s)];
 const UR = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 const showDigit = d => (d === '?' ? '?' : ($('#numeral').value === 'urdu' ? UR[+d] : d));
 
+/* ---------------- form / field catalogue ---------------- */
+const FORMS = {
+  'marksheet':              ['roll_no', 'marks_obtained', 'marks_total'],
+  'polio-tally':            ['children_vaccinated', 'children_missed', 'houses_visited'],
+  'epi-tally':              ['doses_given', 'children_present', 'zero_dose'],
+  'flood-registration':     ['household_id', 'family_size', 'tent_no'],
+  'meter-reading':          ['reading_kwh', 'meter_no', 'previous_reading'],
+  'union-council-register': ['entry_no', 'cnic_last6', 'age_years'],
+};
+function fillForms() {
+  const f = $('#formName');
+  f.innerHTML = Object.keys(FORMS).map(k => `<option value="${k}">${k}</option>`).join('');
+  fillFields();
+  f.onchange = fillFields;
+}
+function fillFields() {
+  $('#fieldName').innerHTML = FORMS[$('#formName').value]
+    .map(k => `<option value="${k}">${k}</option>`).join('');
+}
+fillForms();
+
 /* ---------------- IndexedDB queue ---------------- */
 const DB = new Promise((res, rej) => {
   const r = indexedDB.open('raqam', 1);
@@ -66,11 +87,13 @@ async function imageToCanvas(blob) {
   return c;
 }
 
+function threshold() { return parseFloat($('#thresh').value) || 0.95; }
+
 async function digitizeOffline(canvas) {
   if (!modelReady()) await loadModel('/static/numerals_cnn.json');
   const ctx = canvas.getContext('2d');
   const { cells, boxes, gray, w, h } = segment(ctx.getImageData(0, 0, canvas.width, canvas.height));
-  const THRESH = 0.95;
+  const THRESH = threshold();
   const results = cells.map((px, i) => {
     const { digit, conf } = classify(px);
     return { digit, confidence: +conf.toFixed(4), flagged: conf < THRESH, bbox: [boxes[i].x, boxes[i].y, boxes[i].w, boxes[i].h] };
@@ -94,7 +117,8 @@ async function digitizeOffline(canvas) {
 
 async function digitizeOnline(blob) {
   const fd = new FormData(); fd.append('file', blob, 'scan.png');
-  const r = await fetch(`/api/scan?form=${encodeURIComponent($('#formName').value)}&field=${encodeURIComponent($('#fieldName').value)}`,
+  const r = await fetch(`/api/scan?form=${encodeURIComponent($('#formName').value)}`
+    + `&field=${encodeURIComponent($('#fieldName').value)}&threshold=${threshold()}`,
     { method: 'POST', body: fd });
   if (!r.ok) throw new Error('server scan failed');
   const j = await r.json();
@@ -115,7 +139,7 @@ async function runScan(blob) {
   const stored = {
     ts: Date.now(), form: $('#formName').value, field: $('#fieldName').value,
     value: rec.value, needsReview: rec.needs_review, reviewed: false,
-    cells: rec.cells, imgSha, synced: false, engine: rec.engine,
+    cells: rec.cells, imgSha, synced: false, engine: rec.engine, threshold: threshold(),
   };
   const key = await putRecord(stored);
   stored.localId = key;
@@ -131,7 +155,8 @@ function renderScanResult(rec, reviewImg) {
   $('#scanOut').innerHTML = `
     <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line)">
       <p><strong>#${rec.localId}</strong> · ${rec.form} / ${rec.field} ·
-        ${rec.needsReview ? '<span class="pill flag">needs review</span>' : '<span class="pill ok">auto-accepted</span>'}</p>
+        ${rec.needsReview ? '<span class="pill flag">needs review</span>' : '<span class="pill ok">auto-accepted</span>'}
+        <span class="help">· threshold ${Math.round((rec.threshold || 0.95) * 100)}%</span></p>
       <p class="digits">${digits}</p>
       <p class="confrow">${conf}</p>
       ${reviewImg ? `<img class="review" src="${reviewImg}" alt="annotated scan">` : ''}
@@ -146,7 +171,7 @@ $('#sampleBtn').onclick = async () => {
     runScan(b);
   } catch { $('#scanOut').innerHTML = '<p class="help">Sample needs a connection the first time.</p>'; }
 };
-$('#numeral').onchange = () => { const o = $('#scanOut').dataset; renderRecords(); };
+$('#numeral').onchange = () => { renderRecords(); renderReview(); };
 
 /* ---------------- review ---------------- */
 async function renderReview() {
@@ -184,7 +209,7 @@ async function renderRecords() {
 }
 
 function toCSV(rows) {
-  const head = ['localId', 'ts', 'form', 'field', 'value', 'needsReview', 'reviewed', 'imgSha', 'engine'];
+  const head = ['localId', 'ts', 'form', 'field', 'value', 'needsReview', 'reviewed', 'threshold', 'imgSha', 'engine'];
   return [head.join(','), ...rows.map(r => head.map(k => JSON.stringify(r[k] ?? '')).join(','))].join('\n');
 }
 $('#expCsv').onclick = async () => {
@@ -211,6 +236,18 @@ async function trySync(manual) {
   } catch { $('#syncMsg').textContent = 'Sync failed — server unreachable.'; }
 }
 $('#syncBtn').onclick = () => trySync(true);
+
+$('#wipeBtn').onclick = async () => {
+  const rows = await allRecords();
+  const unsynced = rows.filter(r => !r.synced).length;
+  const msg = unsynced
+    ? `Delete all ${rows.length} local records? ${unsynced} are NOT yet synced and will be lost.`
+    : `Delete all ${rows.length} local records from this device?`;
+  if (!confirm(msg)) return;
+  await tx('readwrite', s => s.clear());
+  $('#syncMsg').textContent = 'Local queue cleared.';
+  renderRecords(); renderReview(); renderDashboard();
+};
 
 /* ---------------- dashboard ---------------- */
 async function renderDashboard() {
