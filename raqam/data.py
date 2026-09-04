@@ -1,11 +1,14 @@
 """Digit datasets.
 
-- MNIST (Western digits) from the standard Keras mirror.
-- HODA (Perso-Arabic / Urdu-Indic digits ۰–۹) from the public farsiocr.ir set,
-  via the amir-saniyan/HodaDatasetReader GitHub mirror.
+- MNIST (Western digits) — standard Keras mirror, auto-downloaded.
+- Urdu handwritten numerals ۰–۹ — 8,020 samples from ~900 writers, shipped in
+  `data/urdu_digits.npz` (via the MNIST-MIX collection, jwwthu/MNIST-MIX).
+- HODA (Perso-Arabic digits) — the large farsiocr.ir set, auto-downloaded, used
+  as extra Perso-Arabic coverage alongside the real Urdu data.
 
 `load_numerals()` returns the union, labelled by digit *value* (0–9) regardless
-of script — the plan's "recognised natively, not transliterated" (§03).
+of script — the plan's "recognised natively, not transliterated" (§03). The real
+Urdu set is upsampled so it isn't drowned by the much larger MNIST/HODA sets.
 """
 from __future__ import annotations
 
@@ -120,19 +123,45 @@ def load_hoda(flatten: bool = True):
     return (x_tr, y_tr), (x_te, y_te)
 
 
+# --- real Urdu handwritten numerals -----------------------------
+def load_urdu(flatten: bool = True):
+    """Return (x_train, y_train), (x_test, y_test) for the real Urdu digit set."""
+    npz = _DATA / "urdu_digits.npz"
+    if not npz.exists():
+        raise FileNotFoundError(
+            f"{npz} missing — this file ships with the repo; restore it with "
+            "`git checkout data/urdu_digits.npz`")
+    with np.load(npz) as f:
+        raw = {k: f[k] for k in ("x_train", "y_train", "x_test", "y_test")}
+
+    def prep(x):
+        x = np.stack([_to_mnist_frame(im) for im in x]).astype("float32")
+        return x.reshape(len(x), -1) if flatten else x
+
+    return ((prep(raw["x_train"]), raw["y_train"].astype("int64")),
+            (prep(raw["x_test"]), raw["y_test"].astype("int64")))
+
+
 # --- union: script-agnostic numerals -----------------------------
-def load_numerals(flatten: bool = True, seed: int = 0):
-    """MNIST + HODA, shuffled, labelled by digit value 0–9."""
+def load_numerals(flatten: bool = True, seed: int = 0, urdu_upsample: int = 6):
+    """MNIST + real Urdu (upsampled) + HODA, shuffled, labelled by digit value 0–9."""
     (ax, ay), (atx, aty) = load(flatten=flatten)
+    (ux, uy), (utx, uty) = load_urdu(flatten=flatten)
     (bx, by), (btx, bty) = load_hoda(flatten=flatten)
     rng = np.random.default_rng(seed)
 
-    def cat(x1, y1, x2, y2):
-        x, y = np.concatenate([x1, x2]), np.concatenate([y1, y2])
+    ux = np.repeat(ux, urdu_upsample, axis=0)
+    uy = np.repeat(uy, urdu_upsample, axis=0)
+
+    def cat(parts):
+        x = np.concatenate([p[0] for p in parts])
+        y = np.concatenate([p[1] for p in parts])
         p = rng.permutation(len(x))
         return x[p], y[p]
 
-    return cat(ax, ay, bx, by), cat(atx, aty, btx, bty)
+    train = cat([(ax, ay), (ux, uy), (bx, by)])
+    test = cat([(atx, aty), (utx, uty), (btx, bty)])
+    return train, test
 
 
 def one_hot(y: np.ndarray, classes: int = 10) -> np.ndarray:
@@ -148,11 +177,16 @@ if __name__ == "__main__":
     assert one_hot(ytr[:3]).sum() == 3
     print("mnist ok", xtr.shape)
 
+    (ux, uy), (utx, uty) = load_urdu()
+    assert ux.shape[1] == 784 and set(np.unique(uy)) == set(range(10))
+    assert 5000 < len(ux) < 9000 and 1000 < len(utx) < 2000
+    print("urdu ok", ux.shape, utx.shape)
+
     (hx, hy), (htx, hty) = load_hoda()
     assert hx.shape[1] == 784 and set(np.unique(hy)) == set(range(10))
     assert 40000 < len(hx) < 70000 and 15000 < len(htx) < 22000
     print("hoda ok", hx.shape, htx.shape)
 
     (nx, ny), (ntx, nty) = load_numerals()
-    assert len(nx) == len(xtr) + len(hx)
+    assert len(nx) == len(xtr) + 6 * len(ux) + len(hx)
     print("numerals ok", nx.shape, ntx.shape)

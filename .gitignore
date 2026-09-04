@@ -12,6 +12,8 @@ node_modules/
 # datasets — auto-downloaded or private, never committed
 /data/*.npz
 /data/*.cdb
+# real Urdu numerals — shipped with the repo, not auto-downloaded
+!/data/urdu_digits.npz
 /data/real_forms/**/*.png
 /data/real_forms/**/*.jpg
 /data/real_forms/**/*.jpeg

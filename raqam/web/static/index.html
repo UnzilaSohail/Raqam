@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#01411C">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/app.css?v=15">
+<link rel="stylesheet" href="/static/app.css?v=16">
 <title>Raqam — Form Digitizer</title>
 </head>
 <body>
@@ -275,7 +275,8 @@
       <ul class="checklist">
         <li class="done"><strong>Urdu-numeral recognition</strong> — rural form-fillers write
           <span class="ur">۰۱۲۳۴۵۶۷۸۹</span>, not just 0–9. One script-agnostic model now recognizes
-          both, trained on MNIST + Perso-Arabic handwriting.</li>
+          both, trained on MNIST + <strong>real Urdu handwritten digits</strong> (~900 writers) +
+          Perso-Arabic handwriting.</li>
         <li class="done"><strong>Accuracy upgrade path</strong> — the 92–96% MLP is not good enough
           for a marksheet or a vaccination record. A from-scratch CNN plus a hard confidence-triage
           rule now flags every uncertain digit instead of guessing.</li>
@@ -455,6 +456,6 @@
   <a href="#" id="programJump">Program brief</a>
 </footer>
 
-<script type="module" src="/static/app.js?v=15"></script>
+<script type="module" src="/static/app.js?v=16"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { loadModel, modelReady, classify, segment } from '/static/recognize.js?v=15';
+import { loadModel, modelReady, classify, segment } from '/static/recognize.js?v=16';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
