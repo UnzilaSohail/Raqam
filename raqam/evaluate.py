@@ -68,11 +68,27 @@ def evaluate(pairs, threshold=0.95):
 
 
 def _load_scans(d: Path):
-    labels = {row[0]: row[1] for row in csv.reader((d / "labels.csv").open())}
-    for name, val in labels.items():
+    csv_path = d / "labels.csv"
+    if not csv_path.exists():
+        raise SystemExit(f"no labels.csv in {d} — see data/real_forms/README.md")
+    rows = list(csv.reader(csv_path.open(encoding="utf-8-sig")))
+    if rows and rows[0][:2] == ["filename", "value"]:
+        rows = rows[1:]                       # skip header
+    n = 0
+    for row in rows:
+        if len(row) < 2 or not row[0].strip():
+            continue
+        name, val = row[0].strip(), row[1].strip()
+        if val.upper() == "SKIP" or val == "":
+            continue
         img = cv2.imread(str(d / name))
-        if img is not None:
-            yield img, str(val)
+        if img is None:
+            print(f"  ! cannot read {name}")
+            continue
+        n += 1
+        yield img, val
+    if not n:
+        raise SystemExit(f"no readable labelled images in {d}")
 
 
 def _synthetic(n: int, seed=0):
@@ -88,6 +104,8 @@ def main():
     ap.add_argument("--scans", type=Path)
     ap.add_argument("--synthetic", type=int, default=0)
     ap.add_argument("--threshold", type=float, default=0.95)
+    ap.add_argument("--sweep", action="store_true",
+                    help="try several thresholds and print the accuracy/auto-accept tradeoff")
     a = ap.parse_args()
 
     if a.scans:
@@ -96,6 +114,14 @@ def main():
         pairs = list(_synthetic(a.synthetic))
     else:
         ap.error("pass --scans DIR or --synthetic N")
+
+    if a.sweep:
+        print(f"{'thresh':>7} {'auto-accept':>12} {'residual err':>13} {'digit err':>10}")
+        for t in (0.80, 0.85, 0.90, 0.93, 0.95, 0.97, 0.98, 0.99):
+            r = evaluate(pairs, t)
+            print(f"{t:>7.2f} {r['auto_rate']*100:>11.1f}% {r['residual_error']*100:>12.2f}% "
+                  f"{r['digit_error']*100:>9.2f}%")
+        return
 
     res = evaluate(pairs, a.threshold)
     OUT.write_text(json.dumps(res, indent=2))

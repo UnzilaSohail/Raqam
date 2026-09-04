@@ -1,10 +1,27 @@
 .venv/
 __pycache__/
 *.pyc
-data/
-models/
-scans/
-*.csv
-*.xlsx
-*.log
 node_modules/
+*.log
+
+# scratch / runtime output (root only)
+/scans/
+/*.csv
+/*.xlsx
+
+# datasets — auto-downloaded or private, never committed
+/data/*.npz
+/data/*.cdb
+/data/real_forms/**/*.png
+/data/real_forms/**/*.jpg
+/data/real_forms/**/*.jpeg
+/data/real_forms/**/*.webp
+/data/real_forms/**/*.pdf
+/data/real_forms/**/*.tif
+/data/real_forms/**/*.tiff
+
+# trained models: ship the small prebuilt ones, ignore the rest
+/models/*
+!/models/mnist_mlp.npz
+!/models/numerals_cnn.npz
+!/models/numerals_cnn.json

@@ -7,16 +7,36 @@ numerals (۰–۹) natively.
 
 ## Quickstart
 
+The trained recognizers are committed under `models/` — **no training needed to run**:
+
 ```bash
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt          # Linux/mac: .venv/bin/pip
-.venv/Scripts/python -m raqam.train                    # MLP on MNIST, ~10s
-.venv/Scripts/python -m raqam.train --model cnn --data numerals --epochs 8   # CNN on MNIST+HODA, ~12 min
 .venv/Scripts/python -m raqam.cli serve                # http://127.0.0.1:8000  → install as an app
 ```
 
-`python selfcheck.py` runs every module's built-in check. 
+`python selfcheck.py` runs every module's built-in check.
 Docker: see [docs/deploy.md](docs/deploy.md).
+
+**Retraining is optional and one-time** — only when you want to improve the model
+with better data, or you deleted `models/`:
+
+```bash
+.venv/Scripts/python -m raqam.train --model cnn --data numerals --epochs 8   # ~12 min, saved to models/
+```
+
+The app loads `models/numerals_cnn.*` instantly on every start; it never retrains on its own.
+
+## Testing on real forms
+
+Put real scanned form photos + a `labels.csv` under `data/real_forms/<form-type>/`
+(see [data/real_forms/README.md](data/real_forms/README.md) — images are git-ignored), then:
+
+```bash
+.venv/Scripts/python -m raqam.evaluate --scans data/real_forms/marksheet --sweep
+```
+
+for real accuracy numbers and the confidence-threshold tradeoff.
 
 ## Phase map (all built)
 
